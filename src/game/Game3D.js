@@ -302,17 +302,7 @@ export class Game3D {
             this.runner.group.position.z -= runDist;
 
             // Update track & recycle
-            this.environment.update(
-                delta,
-                this.runner.group.position.z,
-                this.speed,
-                () => {
-                    this.coins += 1;
-                    this.score += 60;
-                    this._playSound('coin');
-                },
-                () => this.onCrash()
-            );
+            this.environment.update(delta, this.runner.group.position.z, this.speed);
 
             // Check collisions
             this.environment.checkCollisions(

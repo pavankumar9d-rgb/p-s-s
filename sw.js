@@ -1,29 +1,26 @@
-const CACHE = 'city-dash-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './preethi.png',
-  './game_background_city.png',
-  './src/game/Game.js',
-  './src/game/Player.js',
-  './src/game/PreethiRunner.js',
-  './src/game/AnimationController.js',
-  './src/game/CollisionSystem.js',
-  './src/game/EnvironmentBuilder.js',
-  './src/game/TrackManager.js',
-  './src/game/VFXManager.js',
-  './src/game/SoundManager.js',
-  './src/game/FirebaseMock.js',
-  './src/ui/UIManager.js'
-];
-
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
+// Aggressive cache purge and self-unregister to prevent old "City Dash" from showing
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request).catch(() => caches.match('./index.html')))
-  );
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    console.log('Purging legacy cache:', cacheName);
+                    return caches.delete(cacheName);
+                })
+            );
+        }).then(() => {
+            return self.registration.unregister();
+        }).then(() => {
+            return self.clients.claim();
+        })
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    // Direct network pass-through, never serve stale cache
+    event.respondWith(fetch(event.request));
 });

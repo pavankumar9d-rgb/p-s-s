@@ -429,7 +429,7 @@ export class Environment3DManager {
         this.coins.push(powerup); // Reuse collect check
     }
 
-    update(delta, playerZ, speed, onCollectCoin, onCrash) {
+    update(delta, playerZ, speed) {
         // Track recycling
         for (const chunk of this.trackChunks) {
             if (chunk.position.z > playerZ + this.chunkLength) {
@@ -487,7 +487,12 @@ export class Environment3DManager {
             );
 
             if (runnerHitbox.intersectsBox(obsBox)) {
+                // Low barrier: jump over
                 if (u.type === 'barrier' && runnerHitbox.min.y > 0.75) {
+                    continue;
+                }
+                // High overhead hurdle: slide underneath
+                if (u.type === 'high_barrier' && runnerHitbox.max.y < 0.85) {
                     continue;
                 }
                 if (onHitObstacle) onHitObstacle(u.type);

@@ -9,6 +9,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Force clear legacy Service Workers and stale caches -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (const r of registrations) {
+                r.unregister();
+            }
+        });
+    }
+    if ('caches' in window) {
+        caches.keys().then(keys => {
+            for (const k of keys) {
+                caches.delete(k);
+            }
+        });
+    }
+    </script>
+
     <!-- Three.js Import Map -->
     <script type="importmap">
     {

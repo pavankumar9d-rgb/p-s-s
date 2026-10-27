@@ -103,8 +103,9 @@ export class Preethi3DRunner {
                     }
                 });
 
-                // Start with idle or run
-                this.playAnimation('idle');
+                // Start with pending or idle
+                const initialAnim = this.pendingAnimation || 'idle';
+                this.playAnimation(initialAnim);
             }
 
             this.isLoaded = true;
@@ -120,7 +121,10 @@ export class Preethi3DRunner {
     }
 
     playAnimation(name, duration = 0.15) {
-        if (!this.actions || !this.actions[name]) return;
+        if (!this.actions || !this.actions[name]) {
+            this.pendingAnimation = name;
+            return;
+        }
         const nextAction = this.actions[name];
 
         if (this.currentAction && this.currentAction !== nextAction) {
