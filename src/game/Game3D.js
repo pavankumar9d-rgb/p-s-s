@@ -257,6 +257,7 @@ export class Game3D {
         this.state = STATE_GAMEOVER;
         this.cameraShake = 0.55;
         this._playSound('crash');
+        if (this.runner) this.runner.crash();
 
         if (this.score > this.highScore) {
             this.highScore = Math.floor(this.score);

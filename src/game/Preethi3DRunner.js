@@ -8,7 +8,7 @@ export class Preethi3DRunner {
         this.scene.add(this.group);
 
         this.lanes = [-2.0, 0.0, 2.0];
-        this.currentLane = 1; // Center lane
+        this.currentLane = 1;
         this.targetX = 0.0;
         
         // Physics & Jumping
@@ -21,11 +21,15 @@ export class Preethi3DRunner {
         // Sliding
         this.isSliding = false;
         this.slideTimer = 0.0;
-        this.slideDuration = 0.7;
+        this.slideDuration = 0.85;
 
-        // Animation
+        // Flying / Jetpack
+        this.isFlying = false;
+
+        // Animation mixer & state clips
         this.mixer = null;
-        this.runAction = null;
+        this.actions = {};
+        this.currentAction = null;
         this.isLoaded = false;
         this.modelMesh = null;
 
@@ -39,9 +43,7 @@ export class Preethi3DRunner {
         const loader = new GLTFLoader();
         const modelPaths = [
             'assets/models/character/preethi_running.glb',
-            'models/preethi_running.glb',
-            'assets/models/character/preethi_tpose.glb',
-            'models/preethi_runner.glb'
+            'models/preethi_running.glb'
         ];
 
         let gltf = null;
@@ -52,16 +54,11 @@ export class Preethi3DRunner {
                     console.log(`[Preethi3DRunner] Successfully loaded model from: ${p}`);
                     break;
                 }
-            } catch (_) {
-                // try next
-            }
+            } catch (_) {}
         }
 
         if (gltf) {
             this.modelMesh = gltf.scene;
-            
-            // Normalize scale and orientation
-            // In Subway Surfers, runner height is ~1.8m
             this.modelMesh.scale.set(0.9, 0.9, 0.9);
             this.modelMesh.rotation.y = Math.PI; // Face towards -Z (running direction)
             this.modelMesh.position.set(0, 0, 0);
@@ -79,22 +76,41 @@ export class Preethi3DRunner {
 
             this.group.add(this.modelMesh);
 
-            // Setup skeletal animation mixer if animations exist
+            // Setup skeletal animation clips
             if (gltf.animations && gltf.animations.length > 0) {
                 this.mixer = new THREE.AnimationMixer(this.modelMesh);
-                this.runAction = this.mixer.clipAction(gltf.animations[0]);
-                this.runAction.setEffectiveTimeScale(1.2);
-                this.runAction.play();
-                console.log(`[Preethi3DRunner] Playing animation clip: ${gltf.animations[0].name}`);
+                gltf.animations.forEach((clip) => {
+                    const action = this.mixer.clipAction(clip);
+                    const name = clip.name.toLowerCase();
+                    this.actions[name] = action;
+
+                    // Match keywords
+                    if (name.includes('run')) this.actions['run'] = action;
+                    else if (name.includes('jump')) this.actions['jump'] = action;
+                    else if (name.includes('slide')) this.actions['slide'] = action;
+                    else if (name.includes('idle')) this.actions['idle'] = action;
+                    else if (name.includes('left')) this.actions['dodge_left'] = action;
+                    else if (name.includes('right')) this.actions['dodge_right'] = action;
+                    else if (name.includes('crash') || name.includes('stumble')) this.actions['crash'] = action;
+                    else if (name.includes('fly')) this.actions['fly'] = action;
+                });
+
+                // Set jump and slide to play once and clamp
+                ['jump', 'slide', 'crash', 'dodge_left', 'dodge_right'].forEach((k) => {
+                    if (this.actions[k]) {
+                        this.actions[k].setLoop(THREE.LoopOnce);
+                        this.actions[k].clampWhenFinished = true;
+                    }
+                });
+
+                // Start with idle or run
+                this.playAnimation('idle');
             }
 
             this.isLoaded = true;
-        } else {
-            console.warn("[Preethi3DRunner] Falling back to procedural runner placeholder.");
-            this._buildFallbackMesh();
         }
 
-        // Add contact shadow blob under runner
+        // Contact shadow blob
         const shadowGeo = new THREE.CircleGeometry(0.48, 20);
         const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
         this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
@@ -103,23 +119,36 @@ export class Preethi3DRunner {
         this.group.add(this.shadow);
     }
 
-    _buildFallbackMesh() {
-        const bodyGeo = new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.35, 1.1, 4, 8) : new THREE.CylinderGeometry(0.35, 0.35, 1.4, 12);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8a5d78, roughness: 0.6 }); // Mauve dress
-        const fallback = new THREE.Mesh(bodyGeo, bodyMat);
-        fallback.position.y = 0.9;
-        fallback.castShadow = true;
-        this.group.add(fallback);
-        this.modelMesh = fallback;
-        this.isLoaded = true;
+    playAnimation(name, duration = 0.15) {
+        if (!this.actions || !this.actions[name]) return;
+        const nextAction = this.actions[name];
+
+        if (this.currentAction && this.currentAction !== nextAction) {
+            this.currentAction.fadeOut(duration);
+        }
+
+        nextAction.reset().fadeIn(duration).play();
+        this.currentAction = nextAction;
     }
 
     changeLane(direction) {
-        // -1: Left, +1: Right
         const nextLane = this.currentLane + direction;
         if (nextLane >= 0 && nextLane < this.lanes.length) {
             this.currentLane = nextLane;
             this.targetX = this.lanes[this.currentLane];
+
+            // Dodge animation if grounded
+            if (this.isGrounded && !this.isSliding) {
+                const dodgeKey = direction > 0 ? 'dodge_right' : 'dodge_left';
+                if (this.actions[dodgeKey]) {
+                    this.playAnimation(dodgeKey, 0.08);
+                    setTimeout(() => {
+                        if (this.isGrounded && !this.isSliding && this.currentAction === this.actions[dodgeKey]) {
+                            this.playAnimation('run', 0.12);
+                        }
+                    }, 400);
+                }
+            }
         }
     }
 
@@ -127,6 +156,7 @@ export class Preethi3DRunner {
         if (this.isGrounded && !this.isSliding) {
             this.vy = this.jumpVelocity;
             this.isGrounded = false;
+            this.playAnimation('jump', 0.1);
         }
     }
 
@@ -134,27 +164,29 @@ export class Preethi3DRunner {
         if (this.isGrounded && !this.isSliding) {
             this.isSliding = true;
             this.slideTimer = this.slideDuration;
-            // Visual squash for slide
+            this.playAnimation('slide', 0.1);
+
             if (this.modelMesh) {
-                this.modelMesh.scale.set(1.1, 0.45, 1.1);
+                this.modelMesh.scale.set(1.05, 0.5, 1.05);
             }
         }
     }
 
+    crash() {
+        this.playAnimation('crash', 0.1);
+    }
+
     update(delta, isPlaying = true) {
-        // 1. Skeletal animation update
-        if (this.mixer && isPlaying) {
+        if (this.mixer) {
             this.mixer.update(delta);
         }
 
-        // 2. Smooth lane change interpolation
-        this.group.position.x += (this.targetX - this.group.position.x) * Math.min(1.0, delta * 14.0);
-
-        // Subtle banking roll when switching lanes
+        // Smooth lane change
+        this.group.position.x += (this.targetX - this.group.position.x) * Math.min(1.0, delta * 15.0);
         const dx = this.targetX - this.group.position.x;
         this.group.rotation.z = -dx * 0.12;
 
-        // 3. Jump physics
+        // Jump physics
         if (!this.isGrounded) {
             this.vy += this.gravity * delta;
             this.y += this.vy * delta;
@@ -163,11 +195,14 @@ export class Preethi3DRunner {
                 this.y = 0.0;
                 this.vy = 0.0;
                 this.isGrounded = true;
+                if (isPlaying && !this.isSliding) {
+                    this.playAnimation('run', 0.12);
+                }
             }
         }
         this.group.position.y = this.y;
 
-        // 4. Slide recovery
+        // Slide timer recovery
         if (this.isSliding) {
             this.slideTimer -= delta;
             if (this.slideTimer <= 0.0) {
@@ -175,17 +210,20 @@ export class Preethi3DRunner {
                 if (this.modelMesh) {
                     this.modelMesh.scale.set(0.9, 0.9, 0.9);
                 }
+                if (isPlaying && this.isGrounded) {
+                    this.playAnimation('run', 0.15);
+                }
             }
         }
 
-        // 5. Update contact shadow scale & opacity with height
+        // Contact shadow
         if (this.shadow) {
             const hFactor = Math.max(0.1, 1.0 - this.y * 0.35);
             this.shadow.scale.set(hFactor, hFactor, 1.0);
             this.shadow.material.opacity = 0.35 * hFactor;
         }
 
-        // 6. Update Hitbox
+        // Hitbox
         const hitHeight = this.isSliding ? 0.7 : 1.7;
         this.hitbox.min.set(this.group.position.x - 0.4, this.y, this.group.position.z - 0.4);
         this.hitbox.max.set(this.group.position.x + 0.4, this.y + hitHeight, this.group.position.z + 0.4);
@@ -202,6 +240,6 @@ export class Preethi3DRunner {
         if (this.modelMesh) {
             this.modelMesh.scale.set(0.9, 0.9, 0.9);
         }
+        this.playAnimation('run', 0.1);
     }
 }
-

@@ -309,3 +309,4 @@ shutil.copyfile(render_out, os.path.join(ASSETS_DIR, "images", "environment_game
 shutil.copyfile(render_out, os.path.join(MODELS_DIR, "environment_gameplay_render.png"))
 
 print("\n=== INDIAN RAILWAY ENVIRONMENT GENERATED SUCCESSFULLY ===")
+

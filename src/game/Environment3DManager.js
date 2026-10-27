@@ -1,18 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-/**
- * Environment3DManager.js
- * Generates an authentic Native Indian Railway (IR) environment:
- * - Iconic yellow bilingual station boards ("PREETHI JUNCTION / प्रीति जंक्शन")
- * - Classic Indian Railways Blue & Cream ICF Express Trains
- * - 25 kV AC OHE Catenary steel lattice gantries with ceramic insulators
- * - Red-brick platform pavement with yellow-and-black curb stripes
- * - Trackside Chai / Tea stalls with colorful striped canopies
- * - Indian station benches, water taps, and trackside palms
- * - High-speed infinite chunk recycling and obstacle coordination
- */
-
 export class Environment3DManager {
     constructor(scene) {
         this.scene = scene;
@@ -24,14 +12,20 @@ export class Environment3DManager {
         
         this.obstacles = [];
         this.coins = [];
+        this.powerups = [];
 
-        this.trainModel = null;
-        this.barrierModel = null;
-        this.coinModel = null;
+        // Preloaded 3D Model Templates
+        this.models = {
+            trains: [],
+            barriers: [],
+            coins: [],
+            powerups: [],
+            props: []
+        };
 
         this._initTexturesAndMaterials();
         this._buildTrackChunks();
-        this._preloadModels();
+        this._preloadAllGLBAssets();
     }
 
     _createCanvasTexture(width, height, drawFn) {
@@ -48,16 +42,13 @@ export class Environment3DManager {
     }
 
     _initTexturesAndMaterials() {
-        // 1. Iconic Indian Railway Yellow Station Board Texture
+        // Indian Railway Yellow Bilingual Station Sign
         const stationSignTex = this._createCanvasTexture(512, 160, (ctx, w, h) => {
-            // Yellow background
             ctx.fillStyle = '#ffcc00';
             ctx.fillRect(0, 0, w, h);
-            // Black border
             ctx.lineWidth = 8;
             ctx.strokeStyle = '#000000';
             ctx.strokeRect(6, 6, w - 12, h - 12);
-            // Station text
             ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
             ctx.font = 'bold 36px sans-serif';
@@ -69,7 +60,7 @@ export class Environment3DManager {
         });
         this.matStationSign = new THREE.MeshBasicMaterial({ map: stationSignTex });
 
-        // 2. Chai / Refreshment Stall Banner Texture
+        // Chai Stall Banner
         const chaiSignTex = this._createCanvasTexture(512, 128, (ctx, w, h) => {
             ctx.fillStyle = '#d32f2f';
             ctx.fillRect(0, 0, w, h);
@@ -82,7 +73,7 @@ export class Environment3DManager {
         });
         this.matChaiSign = new THREE.MeshBasicMaterial({ map: chaiSignTex });
 
-        // 3. Indian Railway Curb Black & Yellow Warning Stripes
+        // Warning Curb Stripes
         const curbTex = this._createCanvasTexture(256, 64, (ctx, w, h) => {
             const stripeW = 32;
             for (let x = 0; x < w; x += stripeW * 2) {
@@ -96,50 +87,71 @@ export class Environment3DManager {
         curbTex.repeat.set(10, 1);
         this.matCurbStripe = new THREE.MeshStandardMaterial({ map: curbTex, roughness: 0.6 });
 
-        // 4. Track Materials
-        this.matBallast = new THREE.MeshStandardMaterial({ color: 0x3a3835, roughness: 0.95 }); // Crushed basalt stone
-        this.matRail = new THREE.MeshStandardMaterial({ color: 0xc0c8d2, metallic: 0.95, roughness: 0.18 });
-        this.matTie = new THREE.MeshStandardMaterial({ color: 0x5a5550, roughness: 0.85 }); // Concrete sleepers
-        this.matPlatform = new THREE.MeshStandardMaterial({ color: 0x8d5b4c, roughness: 0.75 }); // Red-terracotta brick platform
+        // Base Track Materials
+        this.matBallast = new THREE.MeshStandardMaterial({ color: 0x33302c, roughness: 0.95 });
+        this.matRail = new THREE.MeshStandardMaterial({ color: 0xc4cbd5, metallic: 0.95, roughness: 0.18 });
+        this.matTie = new THREE.MeshStandardMaterial({ color: 0x55504a, roughness: 0.85 });
+        this.matPlatform = new THREE.MeshStandardMaterial({ color: 0x824e40, roughness: 0.8 });
         this.matGantryLattice = new THREE.MeshStandardMaterial({ color: 0x37474f, metallic: 0.85, roughness: 0.35 });
-        this.matInsulator = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.3 }); // Ceramic brown
+        this.matInsulator = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.3 });
         this.matCable = new THREE.MeshStandardMaterial({ color: 0x1c1e22, metallic: 0.7, roughness: 0.4 });
-        this.matAwningRed = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.5 });
-        this.matAwningWhite = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.5 });
         this.matCoin = new THREE.MeshStandardMaterial({ color: 0xffd700, metallic: 0.95, roughness: 0.12, emissive: 0xffaa00, emissiveIntensity: 0.4 });
 
-        // 5. Classic Indian Railways Blue & Cream Train Liveries
-        this.matTrainIRBlue = new THREE.MeshStandardMaterial({ color: 0x153f7c, roughness: 0.3, metalness: 0.2 }); // Iconic IR Blue
-        this.matTrainCreamBand = new THREE.MeshStandardMaterial({ color: 0xf2edd9, roughness: 0.4 }); // Cream mid-band
+        // Indian Railway Express Train Fallback
+        this.matTrainIRBlue = new THREE.MeshStandardMaterial({ color: 0x153f7c, roughness: 0.3, metalness: 0.2 });
+        this.matTrainCreamBand = new THREE.MeshStandardMaterial({ color: 0xf2edd9, roughness: 0.4 });
         this.matTrainRoof = new THREE.MeshStandardMaterial({ color: 0x546e7a, metallic: 0.3, roughness: 0.6 });
         this.matTrainWindow = new THREE.MeshStandardMaterial({ color: 0x0a1220, roughness: 0.1, metalness: 0.85 });
-        this.matTrainGrill = new THREE.MeshStandardMaterial({ color: 0xffb300, roughness: 0.4, emissive: 0xffb300, emissiveIntensity: 0.2 });
+        this.matTrainGrill = new THREE.MeshStandardMaterial({ color: 0xffb300, roughness: 0.4, emissive: 0xffb300, emissiveIntensity: 0.3 });
 
-        // 6. Regional Buildings (Terracotta, Yellow Ochre, Mint Green)
         this.matBuildings = [
-            new THREE.MeshStandardMaterial({ color: 0xc85a38, roughness: 0.75 }), // Terracotta
-            new THREE.MeshStandardMaterial({ color: 0xe6a838, roughness: 0.8 }),  // Mustard Ochre
-            new THREE.MeshStandardMaterial({ color: 0x388e68, roughness: 0.75 }), // Mint / Colonial Green
-            new THREE.MeshStandardMaterial({ color: 0xf5eedc, roughness: 0.85 })  // Sandstone White
+            new THREE.MeshStandardMaterial({ color: 0xc85a38, roughness: 0.75 }),
+            new THREE.MeshStandardMaterial({ color: 0xe6a838, roughness: 0.8 }),
+            new THREE.MeshStandardMaterial({ color: 0x388e68, roughness: 0.75 }),
+            new THREE.MeshStandardMaterial({ color: 0xf5eedc, roughness: 0.85 })
         ];
     }
 
-    _preloadModels() {
+    _preloadAllGLBAssets() {
         const loader = new GLTFLoader();
-        loader.load('assets/models/trains/train.glb', (gltf) => {
-            this.trainModel = gltf.scene;
-            this.trainModel.scale.set(0.95, 0.95, 0.95);
-        }, undefined, () => {});
 
-        loader.load('assets/models/obstacles/metal_barrier.glb', (gltf) => {
-            this.barrierModel = gltf.scene;
-            this.barrierModel.scale.set(0.9, 0.9, 0.9);
-        }, undefined, () => {});
+        const loadModel = (path, category, scale, rotationY = 0) => {
+            loader.load(path, (gltf) => {
+                const root = gltf.scene;
+                root.scale.set(scale, scale, scale);
+                if (rotationY) root.rotation.y = rotationY;
+                root.traverse((c) => {
+                    if (c.isMesh) {
+                        c.castShadow = true;
+                        c.receiveShadow = true;
+                    }
+                });
+                this.models[category].push(root);
+                console.log(`[Environment3DManager] Loaded ${category}: ${path}`);
+            }, undefined, () => {});
+        };
 
-        loader.load('assets/models/collectibles/gold_coin.glb', (gltf) => {
-            this.coinModel = gltf.scene;
-            this.coinModel.scale.set(0.35, 0.35, 0.35);
-        }, undefined, () => {});
+        // 1. Trains
+        loadModel('assets/models/trains/train.glb', 'trains', 0.95, Math.PI);
+        loadModel('assets/models/trains/commuter_train.glb', 'trains', 0.95, Math.PI);
+        loadModel('assets/models/trains/train_car.glb', 'trains', 0.95, Math.PI);
+
+        // 2. Obstacles
+        loadModel('assets/models/obstacles/metal_barrier.glb', 'barriers', 0.85);
+        loadModel('assets/models/obstacles/road_barrier.glb', 'barriers', 0.85);
+        loadModel('assets/models/obstacles/rail_maintenance_vehicle.glb', 'barriers', 0.9);
+
+        // 3. Collectibles & Powerups
+        loadModel('assets/models/collectibles/gold_coin.glb', 'coins', 0.35);
+        loadModel('assets/models/collectibles/horseshoe_magnet.glb', 'powerups', 0.45);
+        loadModel('assets/models/collectibles/hoverboard.glb', 'powerups', 0.5);
+        loadModel('assets/models/collectibles/jetpack.glb', 'powerups', 0.45);
+
+        // 4. Props
+        loadModel('assets/models/props/palm_tree.glb', 'props', 1.1);
+        loadModel('assets/models/props/bench.glb', 'props', 0.9);
+        loadModel('assets/models/props/vending_machine.glb', 'props', 0.85);
+        loadModel('assets/models/props/tunnel_entrance.glb', 'props', 1.0);
     }
 
     _createTrackChunk(zPos) {
@@ -152,7 +164,7 @@ export class Environment3DManager {
         ballast.receiveShadow = true;
         chunk.add(ballast);
 
-        // 2. Steel Rails (Broad Gauge 3-lanes)
+        // 2. Broad Gauge Rails (6 rails)
         const railGauge = 1.1;
         this.lanes.forEach((lx) => {
             [-railGauge / 2, railGauge / 2].forEach((offset) => {
@@ -162,7 +174,7 @@ export class Environment3DManager {
             });
         });
 
-        // 3. Indian Railway Concrete Monoblock Sleepers
+        // 3. Concrete Sleepers
         const sleeperSpacing = 0.8;
         const numSleepers = Math.floor(this.chunkLength / sleeperSpacing);
         for (let i = 0; i < numSleepers; i++) {
@@ -173,117 +185,81 @@ export class Environment3DManager {
             chunk.add(sleeper);
         }
 
-        // 4. Indian Railways 25 kV AC OHE Portal Catenary Gantries
+        // 4. 25 kV AC OHE Portal Catenary Gantries
         const gantryZ = 0.0;
         [-4.2, 4.2].forEach((px) => {
-            // Steel Lattice Mast
             const mast = new THREE.Mesh(new THREE.BoxGeometry(0.22, 6.2, 0.22), this.matGantryLattice);
             mast.position.set(px, 3.1, gantryZ);
             chunk.add(mast);
-
-            // Concrete Mast Foundation
-            const mastBase = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.5), this.matTie);
-            mastBase.position.set(px, 0.3, gantryZ);
-            chunk.add(mastBase);
         });
 
-        // Overhead Portal Cross Girder
         const girder = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.32, 0.35), this.matGantryLattice);
         girder.position.set(0, 6.0, gantryZ);
         chunk.add(girder);
 
-        // Insulators & Cantilever Droppers over each lane
         this.lanes.forEach((lx) => {
-            const insulator = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8), this.matInsulator);
-            insulator.position.set(lx, 5.65, gantryZ);
-            chunk.add(insulator);
-
-            // Overhead Contact Wire
             const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, this.chunkLength, 6), this.matCable);
             wire.rotation.x = Math.PI / 2;
             wire.position.set(lx, 5.4, 0);
             chunk.add(wire);
         });
 
-        // 5. Red-Brick Platforms on Both Sides
+        // 5. Red-Brick Platforms
         [-5.1, 5.1].forEach((platX, sIdx) => {
             const platform = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.65, this.chunkLength), this.matPlatform);
             platform.position.set(platX, 0.32, 0);
             platform.receiveShadow = true;
             chunk.add(platform);
 
-            // Black & Yellow Warning Curb Stripe
             const curbOffset = sIdx === 0 ? 0.92 : -0.92;
             const curb = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.03, this.chunkLength), this.matCurbStripe);
             curb.position.set(platX + curbOffset, 0.66, 0);
             chunk.add(curb);
         });
 
-        // 6. Iconic Yellow Indian Railway Bilingual Station Signboard
+        // 6. Yellow Bilingual Station Signboard
         const signGroup = new THREE.Group();
         signGroup.position.set(-5.1, 1.8, -15.0);
-
-        const signPoles = [-1.4, 1.4];
-        signPoles.forEach((spx) => {
+        [-1.4, 1.4].forEach((spx) => {
             const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8), this.matGantryLattice);
             pole.position.set(spx, -0.2, 0);
             signGroup.add(pole);
         });
-
         const signBoard = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 0.08), this.matStationSign);
         signBoard.position.set(0, 0.7, 0);
         signGroup.add(signBoard);
         chunk.add(signGroup);
 
-        // 7. Trackside Chai & Refreshment Kiosk (टपरी)
+        // 7. Chai & Refreshments Kiosk
         const chaiKiosk = new THREE.Group();
         chaiKiosk.position.set(5.1, 0.65, -25.0);
-
-        // Kiosk Base Counter
         const counter = new THREE.Mesh(
             new THREE.BoxGeometry(1.6, 1.1, 2.4),
-            new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.5 }) // Green stall base
+            new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.5 })
         );
         counter.position.set(0, 0.55, 0);
         chaiKiosk.add(counter);
 
-        // Awning Roof (Red & White Striped Canopy)
-        const awning = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.12, 2.7), this.matAwningRed);
+        const awning = new THREE.Mesh(
+            new THREE.BoxGeometry(1.9, 0.12, 2.7),
+            new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.4 })
+        );
         awning.position.set(0, 1.8, 0);
         awning.rotation.x = 0.1;
         chaiKiosk.add(awning);
 
-        // Chai Sign Banner
         const chaiBanner = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.45, 2.2), this.matChaiSign);
         chaiBanner.position.set(-0.85, 1.45, 0);
         chaiBanner.rotation.y = Math.PI / 2;
         chaiKiosk.add(chaiBanner);
-
         chunk.add(chaiKiosk);
 
-        // 8. Station Benches (Cast-iron with wooden slats)
-        const benchGroup = new THREE.Group();
-        benchGroup.position.set(-5.1, 0.65, -35.0);
-        const benchSeat = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 0.06, 1.4),
-            new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.7 })
-        );
-        benchSeat.position.set(0, 0.4, 0);
-        benchGroup.add(benchSeat);
-        const benchBack = new THREE.Mesh(
-            new THREE.BoxGeometry(0.06, 0.4, 1.4),
-            new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.7 })
-        );
-        benchBack.position.set(-0.22, 0.62, 0);
-        benchGroup.add(benchBack);
-        chunk.add(benchGroup);
-
-        // 9. Traditional Indian Architecture High-rises & Palm Trees
-        for (let b = 0; b < 5; b++) {
+        // 8. Flanking Architecture & Palms
+        for (let b = 0; b < 4; b++) {
             const side = b % 2 === 0 ? -1 : 1;
             const bX = side * (8.8 + (b % 3) * 2.2);
-            const bZ = -this.chunkLength / 2 + (b + 0.5) * (this.chunkLength / 5);
-            const bH = 10.0 + (b % 4) * 4.0;
+            const bZ = -this.chunkLength / 2 + (b + 0.5) * (this.chunkLength / 4);
+            const bH = 10.0 + (b % 3) * 4.0;
             const bldg = new THREE.Mesh(
                 new THREE.BoxGeometry(4.0, bH, 6.0),
                 this.matBuildings[b % this.matBuildings.length]
@@ -291,27 +267,6 @@ export class Environment3DManager {
             bldg.position.set(bX, bH / 2, bZ);
             bldg.castShadow = true;
             chunk.add(bldg);
-
-            // Coconut Palm Tree beside building
-            const palm = new THREE.Group();
-            palm.position.set(side * 6.6, 0, bZ + 3.0);
-            const trunk = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.12, 0.18, 5.0, 7),
-                new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.9 })
-            );
-            trunk.position.y = 2.5;
-            trunk.rotation.z = side * 0.08;
-            palm.add(trunk);
-
-            const frondMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 });
-            for (let f = 0; f < 6; f++) {
-                const frond = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 1.8), frondMat);
-                frond.position.set(0, 5.0, 0);
-                frond.rotation.y = (f / 6) * Math.PI * 2;
-                frond.rotation.x = 0.5;
-                palm.add(frond);
-            }
-            chunk.add(palm);
         }
 
         this.scene.add(chunk);
@@ -330,83 +285,66 @@ export class Environment3DManager {
         const barrierLane = (trainLane + 1) % 3;
         const freeLane = (trainLane + 2) % 3;
 
-        // 1. Spawn Indian Railway Express Train
-        this._spawnIndianTrain(this.lanes[trainLane], targetZ - 12);
+        // 1. Spawn Train (uses real GLB if available, otherwise Indian Express body)
+        this._spawnTrain(this.lanes[trainLane], targetZ - 12);
 
-        // 2. Spawn Track Hurdle Barrier on another lane
+        // 2. Spawn Barrier (uses real GLB if available)
         this._spawnBarrier(this.lanes[barrierLane], targetZ);
 
-        // 3. Spawn Floating Gold Coins
+        // 3. Spawn Coins
         if (Math.random() > 0.4) {
-            this._spawnCoinArc(this.lanes[trainLane], targetZ + 10, targetZ - 20, 8); // Jump over train
+            this._spawnCoinArc(this.lanes[trainLane], targetZ + 10, targetZ - 20, 8);
         }
         this._spawnCoinRow(this.lanes[freeLane], targetZ - 15, 6);
+
+        // 4. Occasional Powerup (Magnet / Jetpack / Hoverboard)
+        if (Math.random() > 0.6 && this.models.powerups.length > 0) {
+            this._spawnPowerup(this.lanes[freeLane], targetZ - 28);
+        }
     }
 
-    _spawnIndianTrain(x, z) {
-        const train = new THREE.Group();
-        const trainLen = 17.0;
-        const trainW = 1.95;
-        const trainH = 2.5;
+    _spawnTrain(x, z) {
+        let train;
+        if (this.models.trains.length > 0) {
+            const tmpl = this.models.trains[Math.floor(Math.random() * this.models.trains.length)];
+            train = tmpl.clone();
+            train.position.set(x, 0.1, z);
+        } else {
+            train = new THREE.Group();
+            const trainLen = 17.0;
+            const trainW = 1.95;
+            const trainH = 2.5;
 
-        // Lower body: Classic IR Blue
-        const body = new THREE.Mesh(
-            new THREE.BoxGeometry(trainW, trainH * 0.75, trainLen),
-            this.matTrainIRBlue
-        );
-        body.position.y = (trainH * 0.75) / 2 + 0.35;
-        body.castShadow = true;
-        train.add(body);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(trainW, trainH * 0.75, trainLen), this.matTrainIRBlue);
+            body.position.y = (trainH * 0.75) / 2 + 0.35;
+            body.castShadow = true;
+            train.add(body);
 
-        // Upper body: Cream Mid-band
-        const creamBand = new THREE.Mesh(
-            new THREE.BoxGeometry(trainW + 0.02, 0.5, trainLen),
-            this.matTrainCreamBand
-        );
-        creamBand.position.y = 1.65;
-        train.add(creamBand);
+            const creamBand = new THREE.Mesh(new THREE.BoxGeometry(trainW + 0.02, 0.5, trainLen), this.matTrainCreamBand);
+            creamBand.position.y = 1.65;
+            train.add(creamBand);
 
-        // Roof: Dark Grey Ribbed Arch
-        const roof = new THREE.Mesh(
-            new THREE.BoxGeometry(trainW * 0.94, 0.28, trainLen * 0.98),
-            this.matTrainRoof
-        );
-        roof.position.y = trainH + 0.15;
-        train.add(roof);
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(trainW * 0.94, 0.28, trainLen * 0.98), this.matTrainRoof);
+            roof.position.y = trainH + 0.15;
+            train.add(roof);
 
-        // Front Windshield & Indian Railway Yellow Buffer Warning Grille
-        const frontFaceZ = trainLen / 2 + 0.02;
-        const windshield = new THREE.Mesh(
-            new THREE.BoxGeometry(trainW * 0.8, 0.65, 0.05),
-            this.matTrainWindow
-        );
-        windshield.position.set(0, 1.85, frontFaceZ);
-        train.add(windshield);
+            const frontFaceZ = trainLen / 2 + 0.02;
+            const windshield = new THREE.Mesh(new THREE.BoxGeometry(trainW * 0.8, 0.65, 0.05), this.matTrainWindow);
+            windshield.position.set(0, 1.85, frontFaceZ);
+            train.add(windshield);
 
-        const yellowStripes = new THREE.Mesh(
-            new THREE.BoxGeometry(trainW * 0.9, 0.45, 0.06),
-            this.matTrainGrill
-        );
-        yellowStripes.position.set(0, 0.9, frontFaceZ);
-        train.add(yellowStripes);
+            const yellowStripes = new THREE.Mesh(new THREE.BoxGeometry(trainW * 0.9, 0.45, 0.06), this.matTrainGrill);
+            yellowStripes.position.set(0, 0.9, frontFaceZ);
+            train.add(yellowStripes);
 
-        // Double Headlights
-        [-0.65, 0.65].forEach((hx) => {
-            const lamp = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12),
-                new THREE.MeshBasicMaterial({ color: 0xfffae0 })
-            );
-            lamp.rotation.x = Math.PI / 2;
-            lamp.position.set(hx, 0.9, frontFaceZ + 0.04);
-            train.add(lamp);
-        });
+            train.position.set(x, 0, z);
+        }
 
-        train.position.set(x, 0, z);
         train.userData = {
             type: 'train',
             width: 1.9,
             height: 2.6,
-            length: trainLen
+            length: 16.0
         };
 
         this.scene.add(train);
@@ -415,15 +353,13 @@ export class Environment3DManager {
 
     _spawnBarrier(x, z) {
         let barrier;
-        if (this.barrierModel) {
-            barrier = this.barrierModel.clone();
+        if (this.models.barriers.length > 0) {
+            const tmpl = this.models.barriers[Math.floor(Math.random() * this.models.barriers.length)];
+            barrier = tmpl.clone();
             barrier.position.set(x, 0.1, z);
         } else {
             barrier = new THREE.Group();
-            const bar = new THREE.Mesh(
-                new THREE.BoxGeometry(1.7, 0.38, 0.12),
-                this.matCurbStripe
-            );
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.38, 0.12), this.matCurbStripe);
             bar.position.y = 0.55;
             bar.castShadow = true;
             barrier.add(bar);
@@ -465,8 +401,8 @@ export class Environment3DManager {
 
     _spawnCoin(x, y, z) {
         let coin;
-        if (this.coinModel) {
-            coin = this.coinModel.clone();
+        if (this.models.coins.length > 0) {
+            coin = this.models.coins[0].clone();
             coin.position.set(x, y, z);
         } else {
             coin = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 16), this.matCoin);
@@ -481,8 +417,20 @@ export class Environment3DManager {
         this.coins.push(coin);
     }
 
+    _spawnPowerup(x, z) {
+        const tmpl = this.models.powerups[Math.floor(Math.random() * this.models.powerups.length)];
+        const powerup = tmpl.clone();
+        powerup.position.set(x, 0.95, z);
+        powerup.userData = {
+            type: 'powerup',
+            collected: false
+        };
+        this.scene.add(powerup);
+        this.coins.push(powerup); // Reuse collect check
+    }
+
     update(delta, playerZ, speed, onCollectCoin, onCrash) {
-        // Recycle track chunks
+        // Track recycling
         for (const chunk of this.trackChunks) {
             if (chunk.position.z > playerZ + this.chunkLength) {
                 let minZ = 0;
@@ -494,7 +442,7 @@ export class Environment3DManager {
             }
         }
 
-        // Coin rotation & cleanup
+        // Rotate collectibles
         for (let i = this.coins.length - 1; i >= 0; i--) {
             const coin = this.coins[i];
             coin.rotation.y += delta * 4.0;
@@ -504,7 +452,7 @@ export class Environment3DManager {
             }
         }
 
-        // Obstacle cleanup
+        // Clean obstacles
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obs = this.obstacles[i];
             if (obs.position.z > playerZ + 25.0) {
@@ -515,12 +463,12 @@ export class Environment3DManager {
     }
 
     checkCollisions(runnerHitbox, onCollectCoin, onHitObstacle) {
-        // Coins
+        // Collectibles
         for (let i = this.coins.length - 1; i >= 0; i--) {
-            const coin = this.coins[i];
-            const dist = coin.position.distanceTo(runnerHitbox.getCenter(new THREE.Vector3()));
-            if (dist < 1.05) {
-                this.scene.remove(coin);
+            const item = this.coins[i];
+            const dist = item.position.distanceTo(runnerHitbox.getCenter(new THREE.Vector3()));
+            if (dist < 1.1) {
+                this.scene.remove(item);
                 this.coins.splice(i, 1);
                 if (onCollectCoin) onCollectCoin();
             }
@@ -540,7 +488,7 @@ export class Environment3DManager {
 
             if (runnerHitbox.intersectsBox(obsBox)) {
                 if (u.type === 'barrier' && runnerHitbox.min.y > 0.75) {
-                    continue; // Cleared by jumping!
+                    continue;
                 }
                 if (onHitObstacle) onHitObstacle(u.type);
                 return;
