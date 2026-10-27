@@ -1,0 +1,64 @@
+================================================================================
+REMAINING IMAGES TO MAKE (8 ASSETS)
+================================================================================
+These are the 8 assets that were queued for generation:
+Copy and paste each prompt into your image generation tool.
+Save the resulting images as PNG directly into:
+C:\Users\saipa\Downloads\image to 3d\
+================================================================================
+
+1. CHR_005_Preethi_Face_Detail.png
+Category: Main Character (Face Sculpt Reference)
+Aspect Ratio: 1:1
+Prompt:
+3D character head and face close-up reference sheet for 3D modeling, stylized 3D digital art. Character Preethi, friendly smiling South Asian young woman with radiant warm smile, expressive big dark brown eyes, refined nose, natural lips, neat dark eyebrows, traditional small red bindi dot on center forehead, delicate silver bell-shaped jhumka earrings. Voluminous dark wavy hair framing face. Neutral studio lighting, clean light grey studio background (#E0E0E0), high quality 3D model texture reference, no text, no watermark.
+
+
+2. TRN_003_Secondary_Metro_Train_Cyan.png
+Category: Trains & Vehicles (Secondary Train Model)
+Aspect Ratio: 1:1
+Prompt:
+3D model reference for game development, stylized 3D high-speed express commuter train. Front three-quarter isometric view. Distinct futuristic aerodynamic bullet-train nose, vibrant electric cyan and polar white livery with dark navy blue stripe, tinted panoramic windshield, glowing dual LED light bars, roof-mounted pantograph. Isolated on clean uniform light grey background (#E0E0E0), clean 3D game vehicle asset, no text, no logos.
+
+
+3. TRN_004_Maintenance_Rail_Trolley.png
+Category: Trains & Vehicles (Maintenance Draisine)
+Aspect Ratio: 1:1
+Prompt:
+3D model reference for game development, stylized 3D motorized railway maintenance trolley draisine. Front three-quarter view. Chunky industrial design, safety orange and black hazard diagonal stripes, small open cab with tubular steel roll cage, miniature hydraulic crane arm, tool storage crates, steel flanged rail wheels on track. Isolated on solid light grey background (#E0E0E0), clean stylized 3D prop, no text.
+
+
+4. OBS_002_Overhead_Low_Clearance_Beam.png
+Category: Gameplay Obstacles (Duck/Slide Barrier)
+Aspect Ratio: 1:1
+Prompt:
+3D model reference for endless runner duck/slide obstacle, stylized 3D overhead low-clearance steel barrier bar. Front three-quarter view. Two sturdy vertical steel I-beam uprights in industrial dark grey supporting a horizontal yellow and black diagonal hazard warning beam, hanging metal clearance warning flaps underneath. Isolated on solid light grey studio background (#E0E0E0), clean 3D game obstacle, no text.
+
+
+5. PWR_003_Hyperboost_Jetpack.png
+Category: Collectibles & Power-Ups (Boost Flight Gear)
+Aspect Ratio: 1:1
+Prompt:
+3D model reference for gameplay power-up equipment, stylized 3D twin-thruster rocket jetpack. Front three-quarter view. Sleek aerodynamic white and electric orange outer shell, dual cylindrical rocket nozzles with glowing cyan plasma thruster flames, padded grey shoulder harness straps, analog pressure gauge with glowing needle. Floating isolated on solid light grey background (#E0E0E0), clean 3D prop, no text.
+
+
+6. PWR_006_Kinetic_Relay_Hoverboard.png
+Category: Collectibles & Power-Ups (Rideable Hoverboard)
+Aspect Ratio: 1:1
+Prompt:
+3D model reference for rideable runner gear, stylized 3D futuristic hoverboard magnetic rail board. Front three-quarter perspective. Sleek aerodynamic deck in matte royal purple and dusty mauve matching Preethi's palette, turquoise neon underside anti-gravity repulsor pads, carbon-fiber textured footpads with glowing edge trim. Floating isolated on light grey studio background (#E0E0E0), clean 3D vehicle prop, no text.
+
+
+7. PROP_006_Vending_Machine.png
+Category: City & Station Props (Platform Vending Machine)
+Aspect Ratio: 1:1
+Prompt:
+3D model reference for city street prop, stylized 3D modern beverage vending machine. Front three-quarter isometric view. Bright turquoise cabinet with coral-red accent panels, illuminated glass display showing rows of colorful soda cans and juice bottles, coin slot, delivery bin, illuminated marquee sign. Isolated on plain light grey background (#E0E0E0), clean game asset model, no text.
+
+
+8. ENV_001_Sunrise_Elevated_Metro_Route.png
+Category: Environment Concepts (Skybox & Mood Reference)
+Aspect Ratio: 16:9 or 1:1
+Prompt:
+Stylized 3D environment concept art for mobile endless runner game. Dramatic low-angle perspective looking down a triple-track elevated concrete railway viaduct curving smoothly towards a radiant golden morning sunrise horizon. Flanked on both sides by colorful stylized pastel modern skyscrapers, lush tropical date palms in raised trackside planters, overhead catenary wires glowing in morning light, glowing railway signal lights, warm atmospheric haze and dust motes, rich depth layering with clear 3-lane gameplay readability, no text, no logo.
+================================================================================

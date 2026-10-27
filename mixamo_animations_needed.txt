@@ -1,0 +1,122 @@
+================================================================================
+MIXAMO ANIMATION REQUIREMENTS & DOWNLOAD GUIDE
+================================================================================
+Character Model: preethi_tpose.fbx (already placed in this folder)
+Target Game: Endless Runner (Subway Surfers Genre - Portrait Mode)
+Rigging Tool: Adobe Mixamo (https://www.mixamo.com)
+================================================================================
+
+--------------------------------------------------------------------------------
+STEP 1: AUTO-RIG IN MIXAMO
+--------------------------------------------------------------------------------
+1. Go to https://www.mixamo.com and log in (free Adobe account).
+2. Click "UPLOAD CHARACTER" on the right panel.
+3. Drag and drop "preethi_tpose.fbx" from this folder.
+4. In the Auto-Rigger chin/wrists/elbows/knees/groin marker screen:
+   - Chin: Center of chin
+   - Wrists: Center of wrists
+   - Elbows: Center of elbow joints
+   - Knees: Center of knee joints
+   - Groin: Base of pelvis / groin
+   - Skeleton LOD: Standard Skeleton (65 bones, includes fingers)
+5. Click Next. When auto-rigging completes, Preethi will be rigged!
+
+--------------------------------------------------------------------------------
+STEP 2: EXACT MIXAMO ANIMATIONS TO SEARCH & DOWNLOAD
+--------------------------------------------------------------------------------
+IMPORTANT: For movement animations (Run, Strafe, etc.), ALWAYS check the 
+"In Place" checkbox in the Mixamo right-hand panel before downloading! 
+In-game forward translation is controlled by the Three.js / game engine.
+
+Download each animation as:
+Format: FBX for Unity (.fbx) or FBX (.fbx)
+Skin: "Without Skin" (to keep file sizes small, since we already have the base mesh)
+      *Or "With Skin" if you want preview in Windows 3D Viewer.
+Frames per Second: 30 or 60 FPS
+Keyframe Reduction: None
+
+--------------------------------------------------------------------------------
+1. CORE RUNNING (Main Gameplay)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Running" or "Fast Run"
+- Recommended Mixamo Asset: "Running" (or "Standard Run")
+- CRITICAL SETTING: Check [x] "In Place" checkbox!
+- In-Game Action: Endless running loop across the 3 railway tracks.
+- Save As: `anim_run.fbx`
+
+--------------------------------------------------------------------------------
+2. JUMPING (Obstacle Avoidance)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Jump" or "Running Jump"
+- Recommended Mixamo Asset: "Running Jump"
+- Settings: High arc, clean take-off and landing.
+- In-Game Action: Jump over low track barriers, hurdles, and onto train roofs.
+- Save As: `anim_jump.fbx`
+
+--------------------------------------------------------------------------------
+3. SLIDING / DUCKING (Low Clearance Obstacles)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Running Slide" or "Baseball Slide"
+- Recommended Mixamo Asset: "Running Slide"
+- Settings: Low body slide under overhead obstacle beams.
+- In-Game Action: Swipe down to slide beneath overhead hazard beams.
+- Save As: `anim_slide.fbx`
+
+--------------------------------------------------------------------------------
+4. LANE SWITCHING / DODGE (Left & Right)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Left Strafe" and "Right Strafe"
+- Recommended Mixamo Assets:
+  - "Left Strafe" (or "Side Step Left") -> Save As: `anim_dodge_left.fbx`
+  - "Right Strafe" (or "Side Step Right") -> Save As: `anim_dodge_right.fbx`
+- CRITICAL SETTING: Check [x] "In Place"
+- In-Game Action: Swipe left/right quick lane transitions between the 3 tracks.
+
+--------------------------------------------------------------------------------
+5. HOVERBOARD / SURFING (Power-Up State)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Surfing" or "Snowboarding" or "Skateboard"
+- Recommended Mixamo Asset: "Surfing" (or "Snowboarding Idle / Ride")
+- In-Game Action: When riding the Kinetic Relay Hoverboard on top of trains!
+  Athletic stance with knees bent and arms extended for balance.
+- Save As: `anim_hoverboard.fbx`
+
+--------------------------------------------------------------------------------
+6. JETPACK FLIGHT (Airborne Boost)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Flying" or "Super Hero Flying"
+- Recommended Mixamo Asset: "Flying"
+- In-Game Action: Flying high above the trains while collecting sky coins.
+- Save As: `anim_jetpack_fly.fbx`
+
+--------------------------------------------------------------------------------
+7. IDLE (Main Menu & Start Screen)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Idle" or "Happy Idle"
+- Recommended Mixamo Asset: "Happy Idle" (or "Female Idle")
+- In-Game Action: Waiting on platform before starting the run.
+- Save As: `anim_idle.fbx`
+
+--------------------------------------------------------------------------------
+8. STUMBLE / CRASH (Game Over)
+--------------------------------------------------------------------------------
+- Search in Mixamo: "Stumble" or "Trip Fall" or "Hit To Body"
+- Recommended Mixamo Asset: "Stumble Backwards" (or "Trip Over")
+- In-Game Action: Colliding with a train or barrier.
+- Save As: `anim_crash.fbx`
+
+--------------------------------------------------------------------------------
+SUMMARY OF FILES TO DROP INTO THIS FOLDER WHEN DONE:
+--------------------------------------------------------------------------------
+[x] preethi_tpose.fbx       (ALREADY COMPLETED)
+[x] preethi_tpose.glb       (ALREADY COMPLETED)
+[ ] anim_run.fbx            (From Mixamo)
+[ ] anim_jump.fbx           (From Mixamo)
+[ ] anim_slide.fbx          (From Mixamo)
+[ ] anim_dodge_left.fbx     (From Mixamo)
+[ ] anim_dodge_right.fbx    (From Mixamo)
+[ ] anim_hoverboard.fbx     (From Mixamo)
+[ ] anim_jetpack_fly.fbx    (From Mixamo)
+[ ] anim_idle.fbx           (From Mixamo)
+[ ] anim_crash.fbx          (From Mixamo)
+================================================================================

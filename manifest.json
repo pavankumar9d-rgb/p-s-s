@@ -1,0 +1,18 @@
+{
+  "name": "City Dash - Endless Runner",
+  "short_name": "City Dash",
+  "description": "Subway Surfers-style endless runner with Preethi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a0a2e",
+  "theme_color": "#1a0a2e",
+  "icons": [
+    {
+      "src": "preethi.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
