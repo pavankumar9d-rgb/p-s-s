@@ -96,3 +96,4 @@ models_glb = r"c:\pk\subway_preethi_surfers\subway\models\preethi_running.glb"
 import shutil
 shutil.copyfile(OUT_GLB, models_glb)
 print("Complete! Size:", os.path.getsize(OUT_GLB), "bytes")
+
