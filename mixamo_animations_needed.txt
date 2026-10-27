@@ -120,3 +120,4 @@ SUMMARY OF FILES TO DROP INTO THIS FOLDER WHEN DONE:
 [ ] anim_idle.fbx           (From Mixamo)
 [ ] anim_crash.fbx          (From Mixamo)
 ================================================================================
+
