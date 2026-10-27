@@ -26,3 +26,4 @@ if ico:
     print("Cleaned and re-exported preethi_running.glb successfully!")
 else:
     print("No Icosphere found. Clean!")
+

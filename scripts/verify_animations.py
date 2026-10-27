@@ -22,3 +22,4 @@ if arm and arm.animation_data:
         print(f"  NLA Track '{track.name}':")
         for strip in track.strips:
             print(f"    Strip: '{strip.name}' (Action: '{strip.action.name if strip.action else 'None'}') Frames: {strip.frame_start} -> {strip.frame_end}")
+

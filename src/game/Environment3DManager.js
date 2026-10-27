@@ -6,13 +6,18 @@ export class Environment3DManager {
         this.scene = scene;
         this.lanes = [-2.0, 0.0, 2.0];
         
+        // Track chunks
         this.trackChunks = [];
         this.chunkLength = 60.0;
         this.numChunks = 4;
         
+        // Active entities
         this.obstacles = [];
         this.coins = [];
-        this.powerups = [];
+
+        // Continuous rhythmic wave cursor (Subway Surfers cadence)
+        this.nextSpawnZ = -18.0;
+        this.spawnInterval = 25.0; // Spawns a rhythmic cluster every 25 meters
 
         // Preloaded 3D Model Templates
         this.models = {
@@ -26,6 +31,9 @@ export class Environment3DManager {
         this._initTexturesAndMaterials();
         this._buildTrackChunks();
         this._preloadAllGLBAssets();
+
+        // Spawn initial continuous track density
+        this._spawnInitialWaves();
     }
 
     _createCanvasTexture(width, height, drawFn) {
@@ -93,16 +101,16 @@ export class Environment3DManager {
         this.matTie = new THREE.MeshStandardMaterial({ color: 0x55504a, roughness: 0.85 });
         this.matPlatform = new THREE.MeshStandardMaterial({ color: 0x824e40, roughness: 0.8 });
         this.matGantryLattice = new THREE.MeshStandardMaterial({ color: 0x37474f, metallic: 0.85, roughness: 0.35 });
-        this.matInsulator = new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.3 });
         this.matCable = new THREE.MeshStandardMaterial({ color: 0x1c1e22, metallic: 0.7, roughness: 0.4 });
         this.matCoin = new THREE.MeshStandardMaterial({ color: 0xffd700, metallic: 0.95, roughness: 0.12, emissive: 0xffaa00, emissiveIntensity: 0.4 });
 
-        // Indian Railway Express Train Fallback
-        this.matTrainIRBlue = new THREE.MeshStandardMaterial({ color: 0x153f7c, roughness: 0.3, metalness: 0.2 });
-        this.matTrainCreamBand = new THREE.MeshStandardMaterial({ color: 0xf2edd9, roughness: 0.4 });
-        this.matTrainRoof = new THREE.MeshStandardMaterial({ color: 0x546e7a, metallic: 0.3, roughness: 0.6 });
+        // Authentic Indian Railways Express Train (ICF Blue & Cream)
+        this.matTrainIRBlue = new THREE.MeshStandardMaterial({ color: 0x153f7c, roughness: 0.32, metalness: 0.25 });
+        this.matTrainCreamBand = new THREE.MeshStandardMaterial({ color: 0xf2edd9, roughness: 0.45 });
+        this.matTrainRoof = new THREE.MeshStandardMaterial({ color: 0x546e7a, metallic: 0.35, roughness: 0.55 });
         this.matTrainWindow = new THREE.MeshStandardMaterial({ color: 0x0a1220, roughness: 0.1, metalness: 0.85 });
         this.matTrainGrill = new THREE.MeshStandardMaterial({ color: 0xffb300, roughness: 0.4, emissive: 0xffb300, emissiveIntensity: 0.3 });
+        this.matHeadlight = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
         this.matBuildings = [
             new THREE.MeshStandardMaterial({ color: 0xc85a38, roughness: 0.75 }),
@@ -112,14 +120,27 @@ export class Environment3DManager {
         ];
     }
 
+    _fitModelToBounds(root, targetW, targetH, targetL) {
+        const box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        const sx = targetW / Math.max(0.001, size.x);
+        const sy = targetH / Math.max(0.001, size.y);
+        const sz = targetL / Math.max(0.001, size.z);
+        root.scale.set(sx, sy, sz);
+        
+        // Re-align base pivot to Y=0
+        const newBox = new THREE.Box3().setFromObject(root);
+        root.position.y -= newBox.min.y;
+    }
+
     _preloadAllGLBAssets() {
         const loader = new GLTFLoader();
 
-        const loadModel = (path, category, scale, rotationY = 0) => {
+        const loadModel = (path, category, targetW, targetH, targetL, rotationY = 0) => {
             loader.load(path, (gltf) => {
                 const root = gltf.scene;
-                root.scale.set(scale, scale, scale);
                 if (rotationY) root.rotation.y = rotationY;
+                this._fitModelToBounds(root, targetW, targetH, targetL);
                 root.traverse((c) => {
                     if (c.isMesh) {
                         c.castShadow = true;
@@ -127,31 +148,31 @@ export class Environment3DManager {
                     }
                 });
                 this.models[category].push(root);
-                console.log(`[Environment3DManager] Loaded ${category}: ${path}`);
+                console.log(`[Environment3DManager] Loaded & Calibrated ${category}: ${path}`);
             }, undefined, () => {});
         };
 
-        // 1. Trains
-        loadModel('assets/models/trains/train.glb', 'trains', 0.95, Math.PI);
-        loadModel('assets/models/trains/commuter_train.glb', 'trains', 0.95, Math.PI);
-        loadModel('assets/models/trains/train_car.glb', 'trains', 0.95, Math.PI);
+        // 1. Trains (calibrated to full Indian Railway scale: 1.95m W, 2.6m H, 16.5m L)
+        loadModel('assets/models/trains/train.glb', 'trains', 1.95, 2.6, 16.5, Math.PI);
+        loadModel('assets/models/trains/commuter_train.glb', 'trains', 1.95, 2.6, 16.5, Math.PI);
+        loadModel('assets/models/trains/train_car.glb', 'trains', 1.95, 2.6, 16.5, Math.PI);
 
-        // 2. Obstacles
-        loadModel('assets/models/obstacles/metal_barrier.glb', 'barriers', 0.85);
-        loadModel('assets/models/obstacles/road_barrier.glb', 'barriers', 0.85);
-        loadModel('assets/models/obstacles/rail_maintenance_vehicle.glb', 'barriers', 0.9);
+        // 2. Obstacles (calibrated to 1.8m lane width)
+        loadModel('assets/models/obstacles/metal_barrier.glb', 'barriers', 1.8, 0.85, 0.35);
+        loadModel('assets/models/obstacles/road_barrier.glb', 'barriers', 1.8, 0.85, 0.35);
+        loadModel('assets/models/obstacles/rail_maintenance_vehicle.glb', 'barriers', 1.85, 1.2, 2.5);
 
         // 3. Collectibles & Powerups
-        loadModel('assets/models/collectibles/gold_coin.glb', 'coins', 0.35);
-        loadModel('assets/models/collectibles/horseshoe_magnet.glb', 'powerups', 0.45);
-        loadModel('assets/models/collectibles/hoverboard.glb', 'powerups', 0.5);
-        loadModel('assets/models/collectibles/jetpack.glb', 'powerups', 0.45);
+        loadModel('assets/models/collectibles/gold_coin.glb', 'coins', 0.45, 0.45, 0.1);
+        loadModel('assets/models/collectibles/horseshoe_magnet.glb', 'powerups', 0.55, 0.55, 0.55);
+        loadModel('assets/models/collectibles/hoverboard.glb', 'powerups', 0.55, 0.25, 1.2);
+        loadModel('assets/models/collectibles/jetpack.glb', 'powerups', 0.55, 0.65, 0.4);
 
         // 4. Props
-        loadModel('assets/models/props/palm_tree.glb', 'props', 1.1);
-        loadModel('assets/models/props/bench.glb', 'props', 0.9);
-        loadModel('assets/models/props/vending_machine.glb', 'props', 0.85);
-        loadModel('assets/models/props/tunnel_entrance.glb', 'props', 1.0);
+        loadModel('assets/models/props/palm_tree.glb', 'props', 2.8, 6.0, 2.8);
+        loadModel('assets/models/props/bench.glb', 'props', 1.8, 0.9, 0.8);
+        loadModel('assets/models/props/vending_machine.glb', 'props', 1.1, 2.1, 0.9);
+        loadModel('assets/models/props/tunnel_entrance.glb', 'props', 8.5, 7.0, 5.0);
     }
 
     _createTrackChunk(zPos) {
@@ -164,7 +185,7 @@ export class Environment3DManager {
         ballast.receiveShadow = true;
         chunk.add(ballast);
 
-        // 2. Broad Gauge Rails (6 rails)
+        // 2. Broad Gauge Rails (6 rails across 3 lanes)
         const railGauge = 1.1;
         this.lanes.forEach((lx) => {
             [-railGauge / 2, railGauge / 2].forEach((offset) => {
@@ -280,123 +301,166 @@ export class Environment3DManager {
         }
     }
 
+    _spawnInitialWaves() {
+        // Continuous wave progression ahead of player
+        for (let i = 0; i < 7; i++) {
+            this.spawnObstaclePattern(this.nextSpawnZ);
+            this.nextSpawnZ -= this.spawnInterval;
+        }
+    }
+
     spawnObstaclePattern(targetZ) {
+        const patternType = Math.floor(Math.random() * 5);
         const trainLane = Math.floor(Math.random() * 3);
         const barrierLane = (trainLane + 1) % 3;
         const freeLane = (trainLane + 2) % 3;
 
-        // 1. Spawn Train (uses real GLB if available, otherwise Indian Express body)
-        this._spawnTrain(this.lanes[trainLane], targetZ - 12);
-
-        // 2. Spawn Barrier (uses real GLB if available)
-        this._spawnBarrier(this.lanes[barrierLane], targetZ);
-
-        // 3. Spawn Coins
-        if (Math.random() > 0.4) {
-            this._spawnCoinArc(this.lanes[trainLane], targetZ + 10, targetZ - 20, 8);
-        }
-        this._spawnCoinRow(this.lanes[freeLane], targetZ - 15, 6);
-
-        // 4. Occasional Powerup (Magnet / Jetpack / Hoverboard)
-        if (Math.random() > 0.6 && this.models.powerups.length > 0) {
-            this._spawnPowerup(this.lanes[freeLane], targetZ - 28);
+        if (patternType === 0) {
+            // Pattern 0: Parked Train on one track with Coins on free track
+            this._spawnTrain(this.lanes[trainLane], targetZ - 8, false);
+            this._spawnCoinRow(this.lanes[freeLane], targetZ - 12, 6);
+            this._spawnBarrier(this.lanes[barrierLane], targetZ, false);
+        } else if (patternType === 1) {
+            // Pattern 1: Oncoming Moving Train! High-speed excitement
+            this._spawnTrain(this.lanes[trainLane], targetZ - 14, true);
+            this._spawnCoinArc(this.lanes[barrierLane], targetZ + 5, targetZ - 15, 7);
+            this._spawnBarrier(this.lanes[barrierLane], targetZ, false);
+        } else if (patternType === 2) {
+            // Pattern 2: High Overhead Barrier (Requires Slide!)
+            this._spawnBarrier(this.lanes[freeLane], targetZ, true);
+            this._spawnCoinRow(this.lanes[freeLane], targetZ - 8, 5, 0.4);
+            this._spawnTrain(this.lanes[trainLane], targetZ - 10, false);
+        } else if (patternType === 3) {
+            // Pattern 3: Double Barriers with Powerup in center
+            this._spawnBarrier(this.lanes[0], targetZ, false);
+            this._spawnBarrier(this.lanes[2], targetZ, false);
+            this._spawnCoinRow(this.lanes[1], targetZ - 10, 6);
+            if (Math.random() > 0.4) {
+                this._spawnPowerup(this.lanes[1], targetZ - 4);
+            }
+        } else {
+            // Pattern 4: Coin Bonanza & Leap Arc
+            this._spawnBarrier(this.lanes[1], targetZ, false);
+            this._spawnCoinArc(this.lanes[1], targetZ + 6, targetZ - 12, 7);
+            this._spawnTrain(this.lanes[trainLane], targetZ - 10, false);
+            if (Math.random() > 0.5) {
+                this._spawnPowerup(this.lanes[freeLane], targetZ - 6);
+            }
         }
     }
 
-    _spawnTrain(x, z) {
+    _spawnTrain(x, z, isOncoming = false) {
         let train;
         if (this.models.trains.length > 0) {
             const tmpl = this.models.trains[Math.floor(Math.random() * this.models.trains.length)];
             train = tmpl.clone();
             train.position.set(x, 0.1, z);
         } else {
+            // Procedural Authentic Indian Railways ICF Express Coach
             train = new THREE.Group();
-            const trainLen = 17.0;
+            const trainLen = 16.5;
             const trainW = 1.95;
             const trainH = 2.5;
 
+            // Deep Blue Lower/Upper Body
             const body = new THREE.Mesh(new THREE.BoxGeometry(trainW, trainH * 0.75, trainLen), this.matTrainIRBlue);
             body.position.y = (trainH * 0.75) / 2 + 0.35;
             body.castShadow = true;
             train.add(body);
 
+            // Iconic Cream Mid-Band
             const creamBand = new THREE.Mesh(new THREE.BoxGeometry(trainW + 0.02, 0.5, trainLen), this.matTrainCreamBand);
             creamBand.position.y = 1.65;
             train.add(creamBand);
 
+            // Grey Steel Roof
             const roof = new THREE.Mesh(new THREE.BoxGeometry(trainW * 0.94, 0.28, trainLen * 0.98), this.matTrainRoof);
             roof.position.y = trainH + 0.15;
             train.add(roof);
 
+            // Front Windshield
             const frontFaceZ = trainLen / 2 + 0.02;
             const windshield = new THREE.Mesh(new THREE.BoxGeometry(trainW * 0.8, 0.65, 0.05), this.matTrainWindow);
             windshield.position.set(0, 1.85, frontFaceZ);
             train.add(windshield);
 
+            // Front Yellow Hazard Stripes
             const yellowStripes = new THREE.Mesh(new THREE.BoxGeometry(trainW * 0.9, 0.45, 0.06), this.matTrainGrill);
             yellowStripes.position.set(0, 0.9, frontFaceZ);
             train.add(yellowStripes);
+
+            // Headlights
+            [-0.6, 0.6].forEach((hx) => {
+                const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12), this.matHeadlight);
+                hl.rotation.x = Math.PI / 2;
+                hl.position.set(hx, 1.0, frontFaceZ + 0.02);
+                train.add(hl);
+            });
 
             train.position.set(x, 0, z);
         }
 
         train.userData = {
             type: 'train',
-            width: 1.9,
+            width: 1.95,
             height: 2.6,
-            length: 16.0
+            length: 16.5,
+            isOncoming: isOncoming,
+            speed: isOncoming ? 14.0 : 0.0
         };
 
         this.scene.add(train);
         this.obstacles.push(train);
     }
 
-    _spawnBarrier(x, z) {
+    _spawnBarrier(x, z, isHigh = false) {
         let barrier;
-        if (this.models.barriers.length > 0) {
+        if (this.models.barriers.length > 0 && !isHigh) {
             const tmpl = this.models.barriers[Math.floor(Math.random() * this.models.barriers.length)];
             barrier = tmpl.clone();
             barrier.position.set(x, 0.1, z);
         } else {
             barrier = new THREE.Group();
-            const bar = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.38, 0.12), this.matCurbStripe);
-            bar.position.y = 0.55;
-            bar.castShadow = true;
-            barrier.add(bar);
+            if (isHigh) {
+                // High overhead caution hurdle: must slide underneath!
+                const bar = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.45, 0.15), this.matCurbStripe);
+                bar.position.y = 1.35;
+                bar.castShadow = true;
+                barrier.add(bar);
 
-            const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.7, 8);
-            [-0.7, 0.7].forEach((lx) => {
-                const leg = new THREE.Mesh(legGeo, this.matGantryLattice);
-                leg.position.set(lx, 0.35, 0);
-                barrier.add(leg);
-            });
+                // Tall support posts
+                const legGeo = new THREE.BoxGeometry(0.12, 1.8, 0.12);
+                [-0.85, 0.85].forEach((lx) => {
+                    const leg = new THREE.Mesh(legGeo, this.matGantryLattice);
+                    leg.position.set(lx, 0.9, 0);
+                    barrier.add(leg);
+                });
+            } else {
+                // Low hurdle: jumpable over!
+                const bar = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.38, 0.14), this.matCurbStripe);
+                bar.position.y = 0.55;
+                bar.castShadow = true;
+                barrier.add(bar);
+
+                const legGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.72, 8);
+                [-0.75, 0.75].forEach((lx) => {
+                    const leg = new THREE.Mesh(legGeo, this.matGantryLattice);
+                    leg.position.set(lx, 0.36, 0);
+                    barrier.add(leg);
+                });
+            }
             barrier.position.set(x, 0, z);
         }
 
         barrier.userData = {
-            type: 'barrier',
-            width: 1.7,
-            height: 0.85,
-            length: 0.4
+            type: isHigh ? 'high_barrier' : 'barrier',
+            width: 1.8,
+            height: isHigh ? 1.8 : 0.82,
+            length: 0.35
         };
 
         this.scene.add(barrier);
         this.obstacles.push(barrier);
-    }
-
-    _spawnCoinRow(x, startZ, count) {
-        for (let i = 0; i < count; i++) {
-            this._spawnCoin(x, 0.85, startZ - i * 1.8);
-        }
-    }
-
-    _spawnCoinArc(x, startZ, endZ, count) {
-        const dz = (endZ - startZ) / (count - 1);
-        for (let i = 0; i < count; i++) {
-            const z = startZ + i * dz;
-            const arcH = 0.85 + Math.sin((i / (count - 1)) * Math.PI) * 2.3;
-            this._spawnCoin(x, arcH, z);
-        }
     }
 
     _spawnCoin(x, y, z) {
@@ -405,6 +469,7 @@ export class Environment3DManager {
             coin = this.models.coins[0].clone();
             coin.position.set(x, y, z);
         } else {
+            // Glowing 3D Gold Coin
             coin = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 16), this.matCoin);
             coin.rotation.x = Math.PI / 2;
             coin.position.set(x, y, z);
@@ -417,20 +482,66 @@ export class Environment3DManager {
         this.coins.push(coin);
     }
 
+    _spawnCoinRow(x, startZ, count, y = 0.85) {
+        for (let i = 0; i < count; i++) {
+            this._spawnCoin(x, y, startZ - i * 1.8);
+        }
+    }
+
+    _spawnCoinArc(x, startZ, endZ, count) {
+        const dz = (endZ - startZ) / (count - 1);
+        for (let i = 0; i < count; i++) {
+            const z = startZ + i * dz;
+            const arcH = 0.85 + Math.sin((i / (count - 1)) * Math.PI) * 2.3;
+            this._spawnCoin(x, arcH, z);
+        }
+    }
+
     _spawnPowerup(x, z) {
-        const tmpl = this.models.powerups[Math.floor(Math.random() * this.models.powerups.length)];
-        const powerup = tmpl.clone();
-        powerup.position.set(x, 0.95, z);
+        const types = ['magnet', 'hoverboard', 'jetpack', 'multiplier'];
+        const chosen = types[Math.floor(Math.random() * types.length)];
+
+        let powerup;
+        if (this.models.powerups.length > 0) {
+            const tmpl = this.models.powerups[Math.floor(Math.random() * this.models.powerups.length)];
+            powerup = tmpl.clone();
+            powerup.position.set(x, 0.95, z);
+        } else {
+            const colors = {
+                magnet: 0xe91e63,
+                hoverboard: 0x9c27b0,
+                jetpack: 0xff9800,
+                multiplier: 0x4caf50
+            };
+            const geo = new THREE.OctahedronGeometry(0.38, 0);
+            const mat = new THREE.MeshStandardMaterial({
+                color: colors[chosen] || 0x00bcd4,
+                emissive: colors[chosen] || 0x00bcd4,
+                emissiveIntensity: 0.6,
+                roughness: 0.2
+            });
+            powerup = new THREE.Mesh(geo, mat);
+            powerup.position.set(x, 0.95, z);
+        }
+
         powerup.userData = {
             type: 'powerup',
+            powerupType: chosen,
             collected: false
         };
+
         this.scene.add(powerup);
-        this.coins.push(powerup); // Reuse collect check
+        this.coins.push(powerup);
     }
 
     update(delta, playerZ, speed) {
-        // Track recycling
+        // Continuous wave generation: maintain 160m buffer ahead of player
+        while (this.nextSpawnZ > playerZ - 160.0) {
+            this.spawnObstaclePattern(this.nextSpawnZ);
+            this.nextSpawnZ -= this.spawnInterval;
+        }
+
+        // Track chunk recycling
         for (const chunk of this.trackChunks) {
             if (chunk.position.z > playerZ + this.chunkLength) {
                 let minZ = 0;
@@ -438,23 +549,25 @@ export class Environment3DManager {
                     if (c.position.z < minZ) minZ = c.position.z;
                 }
                 chunk.position.z = minZ - this.chunkLength;
-                this.spawnObstaclePattern(chunk.position.z);
             }
         }
 
-        // Rotate collectibles
+        // Rotate collectibles & coins
         for (let i = this.coins.length - 1; i >= 0; i--) {
-            const coin = this.coins[i];
-            coin.rotation.y += delta * 4.0;
-            if (coin.position.z > playerZ + 15.0) {
-                this.scene.remove(coin);
+            const item = this.coins[i];
+            item.rotation.y += delta * 3.8;
+            if (item.position.z > playerZ + 15.0) {
+                this.scene.remove(item);
                 this.coins.splice(i, 1);
             }
         }
 
-        // Clean obstacles
+        // Move oncoming trains & clean passed obstacles
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obs = this.obstacles[i];
+            if (obs.userData.isOncoming) {
+                obs.position.z += obs.userData.speed * delta;
+            }
             if (obs.position.z > playerZ + 25.0) {
                 this.scene.remove(obs);
                 this.obstacles.splice(i, 1);
@@ -462,23 +575,35 @@ export class Environment3DManager {
         }
     }
 
-    checkCollisions(runnerHitbox, onCollectCoin, onHitObstacle) {
-        // Collectibles
+    checkCollisions(runnerHitbox, runnerCenter, hasMagnet, onCollectCoin, onCollectPowerup, onHitObstacle) {
+        // 1. Collectibles with Magnetic Attraction
         for (let i = this.coins.length - 1; i >= 0; i--) {
             const item = this.coins[i];
-            const dist = item.position.distanceTo(runnerHitbox.getCenter(new THREE.Vector3()));
-            if (dist < 1.1) {
+            const dist = item.position.distanceTo(runnerCenter);
+
+            // Magnetic suction effect (Subway Surfers magnet mechanic)
+            if (hasMagnet && item.userData.type === 'coin' && dist < 12.0) {
+                const dir = runnerCenter.clone().sub(item.position).normalize();
+                item.position.addScaledVector(dir, 32.0 * 0.016);
+            }
+
+            if (dist < 1.15) {
                 this.scene.remove(item);
                 this.coins.splice(i, 1);
-                if (onCollectCoin) onCollectCoin();
+                if (item.userData.type === 'powerup') {
+                    if (onCollectPowerup) onCollectPowerup(item.userData.powerupType);
+                } else {
+                    if (onCollectCoin) onCollectCoin();
+                }
             }
         }
 
-        // Obstacles
+        // 2. Obstacles with Subway Surfers Forgiveness Margins
         for (const obs of this.obstacles) {
             const u = obs.userData;
-            const halfW = (u.width || 1.8) / 2;
-            const halfL = (u.length || 2.0) / 2;
+            // 22% inward grace margin for seamless lane switching
+            const halfW = ((u.width || 1.8) * 0.78) / 2;
+            const halfL = ((u.length || 2.0) * 0.78) / 2;
             const topY = obs.position.y + (u.height || 2.0);
 
             const obsBox = new THREE.Box3(
@@ -487,11 +612,11 @@ export class Environment3DManager {
             );
 
             if (runnerHitbox.intersectsBox(obsBox)) {
-                // Low barrier: jump over
-                if (u.type === 'barrier' && runnerHitbox.min.y > 0.75) {
+                // Low barrier: jump clearance check
+                if (u.type === 'barrier' && runnerHitbox.min.y > 0.58) {
                     continue;
                 }
-                // High overhead hurdle: slide underneath
+                // High overhead barrier: duck/slide clearance check
                 if (u.type === 'high_barrier' && runnerHitbox.max.y < 0.85) {
                     continue;
                 }
@@ -502,14 +627,19 @@ export class Environment3DManager {
     }
 
     reset() {
+        // Clear all spawned obstacles and coins
         for (const obs of this.obstacles) this.scene.remove(obs);
         for (const coin of this.coins) this.scene.remove(coin);
         this.obstacles = [];
         this.coins = [];
 
+        // Reset track chunks
         for (let i = 0; i < this.trackChunks.length; i++) {
             this.trackChunks[i].position.z = -i * this.chunkLength;
-            if (i > 0) this.spawnObstaclePattern(-i * this.chunkLength);
         }
+
+        // Reset spawn cursor and reseed continuous waves
+        this.nextSpawnZ = -18.0;
+        this._spawnInitialWaves();
     }
 }
